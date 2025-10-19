@@ -1,0 +1,158 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                   🚀 AIOps Alert Analysis System                          ║
+║                        Quick Getting Started                              ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+📋 PREREQUISITES
+  ✓ Docker & Docker Compose installed
+  ✓ DeepSeek API key (get from https://platform.deepseek.com/)
+
+�� FASTEST START (3 Steps)
+
+  1. Set your API key:
+     export DEEPSEEK_API_KEY="your_api_key_here"
+     
+     OR edit docker-compose.yml line 88
+
+  2. Start everything:
+     docker-compose up -d
+
+  3. Test it:
+     ./test-alert.sh
+
+📊 ACCESS YOUR SERVICES
+  
+  Prometheus:      http://localhost:9090
+  Grafana:         http://localhost:3000  (admin/admin)
+  AlertManager:    http://localhost:9093
+  AIOps Processor: http://localhost:8000
+  
+  Check health:    curl http://localhost:8000/health
+
+🧪 TRIGGER A REAL ALERT
+
+  # Generate CPU load
+  docker exec -it node-exporter sh -c "dd if=/dev/zero of=/dev/null & dd if=/dev/zero of=/dev/null &"
+  
+  # Watch the magic happen (in 2-3 minutes)
+  docker-compose logs -f aiops-processor
+  
+  # Stop the load
+  docker exec -it node-exporter sh -c "killall dd"
+
+📖 DOCUMENTATION
+  
+  Quick Start:      QUICKSTART.md (5 min setup)
+  Full Guide:       README.md (comprehensive)
+  Development:      DEVELOPMENT.md (customization)
+  Troubleshooting:  TROUBLESHOOTING.md (common issues)
+  Architecture:     ARCHITECTURE.md (system design)
+
+🔧 CUSTOMIZATION
+
+  Add Slack notifications:
+    - Edit docker-compose.yml
+    - Set SLACK_WEBHOOK_URL
+    - Restart: docker-compose restart aiops-processor
+
+  Add custom alerts:
+    - Edit prometheus/alert_rules.yml
+    - Restart: docker-compose restart prometheus
+
+  Adjust time window:
+    - Edit TIME_WINDOW_MINUTES in docker-compose.yml
+    - Default is 15 minutes
+
+�� USEFUL COMMANDS
+
+  Start services:     docker-compose up -d
+  Stop services:      docker-compose down
+  View logs:          docker-compose logs -f aiops-processor
+  Restart service:    docker-compose restart aiops-processor
+  Check status:       docker-compose ps
+  View queue:         curl localhost:8000/queue/status
+
+🎓 WHAT IT DOES
+
+  1. Receives alerts from Prometheus via AlertManager
+  2. Automatically queries metrics from Prometheus (15 min window)
+  3. Automatically queries logs from Loki (errors, warnings)
+  4. Sends everything to DeepSeek AI for analysis
+  5. Gets back:
+     - Root cause analysis
+     - Supporting evidence
+     - Remediation steps
+     - Severity assessment
+  6. Sends formatted notification to Slack/webhook
+
+🏗️ PROJECT STRUCTURE
+
+  aiops-processor/     → Main AI analysis application
+  prometheus/          → Metrics collection & alerting
+  alertmanager/        → Alert routing
+  loki/                → Log aggregation
+  grafana/             → Visualization
+  *.md                 → Documentation
+  setup.sh             → Automated setup script
+  test-alert.sh        → Testing script
+
+✅ VERIFY EVERYTHING WORKS
+
+  1. Check all services running:
+     docker-compose ps
+     
+     Expected: 8 services in "Up" state
+
+  2. Check health:
+     curl http://localhost:8000/health
+     
+     Expected: {"status": "healthy", ...}
+
+  3. Check alerts:
+     open http://localhost:9090/alerts
+     
+     Expected: Alert rules loaded
+
+  4. Send test alert:
+     ./test-alert.sh
+     
+     Expected: Analysis response in JSON
+
+🆘 TROUBLESHOOTING
+
+  Services won't start:
+    → docker-compose logs [service-name]
+    → Check ports not already in use
+    → Ensure Docker has enough resources (4GB RAM min)
+
+  No alerts being processed:
+    → Check Prometheus alerts: http://localhost:9090/alerts
+    → Check AlertManager: http://localhost:9093
+    → View logs: docker-compose logs aiops-processor
+
+  LLM analysis fails:
+    → Verify API key: docker exec aiops-processor env | grep DEEPSEEK
+    → Check connectivity: docker exec aiops-processor curl -I api.deepseek.com
+    → See TROUBLESHOOTING.md for detailed help
+
+🔐 SECURITY NOTES
+
+  ⚠️  Remember to:
+    - Remove API keys from secrets file
+    - Never commit .env files
+    - Use Docker secrets in production
+    - Add authentication to webhooks in production
+    - Enable HTTPS for production deployments
+
+📞 NEED HELP?
+
+  1. Read QUICKSTART.md (most common questions)
+  2. Check TROUBLESHOOTING.md (common issues & solutions)
+  3. Review logs: docker-compose logs -f
+  4. See DEVELOPMENT.md for customization help
+
+═══════════════════════════════════════════════════════════════════════════
+
+Ready to start? Run:  ./setup.sh  or  docker-compose up -d
+
+Good luck! 🎉
