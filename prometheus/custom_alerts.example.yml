@@ -1,0 +1,210 @@
+# Custom Alert Rules Example
+# Copy relevant alerts to alert_rules.yml or create a new file and reference it in prometheus.yml
+
+groups:
+  # Database Alerts
+  - name: database_alerts
+    interval: 30s
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connection_pool_active / db_connection_pool_max > 0.9
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Connection pool usage is at {{ $value }}%"
+          runbook_url: "https://runbooks.example.com/db-connections"
+
+      - alert: SlowQueryDetected
+        expr: db_query_duration_seconds > 5
+        for: 1m
+        labels:
+          severity: warning
+          component: database
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Query duration {{ $value }}s exceeds threshold"
+
+  # Application Alerts
+  - name: application_performance
+    interval: 30s
+    rules:
+      - alert: HighLatency
+        expr: http_request_duration_seconds{quantile="0.95"} > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: application
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "High request latency on {{ $labels.service }}"
+          description: "95th percentile latency is {{ $value }}s"
+
+      - alert: ErrorRateHigh
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: application
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "High error rate on {{ $labels.service }}"
+          description: "Error rate: {{ $value }} errors/sec"
+
+      - alert: RequestRateDrop
+        expr: rate(http_requests_total[5m]) < 0.1 * rate(http_requests_total[1h] offset 1h)
+        for: 5m
+        labels:
+          severity: warning
+          component: application
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "Significant drop in request rate"
+          description: "Request rate dropped to {{ $value }}/sec"
+
+  # Container/Kubernetes Alerts
+  - name: container_alerts
+    interval: 30s
+    rules:
+      - alert: ContainerCPUThrottling
+        expr: rate(container_cpu_cfs_throttled_seconds_total[5m]) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          component: container
+          service: "{{ $labels.container }}"
+        annotations:
+          summary: "Container CPU throttling detected"
+          description: "Container {{ $labels.container }} is being throttled"
+
+      - alert: ContainerMemoryUsageHigh
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+        for: 2m
+        labels:
+          severity: critical
+          component: container
+          service: "{{ $labels.container }}"
+        annotations:
+          summary: "Container memory usage very high"
+          description: "Memory usage at {{ $value }}%"
+
+      - alert: ContainerRestarting
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: container
+          service: "{{ $labels.container }}"
+        annotations:
+          summary: "Container is restarting"
+          description: "Container {{ $labels.container }} restarted {{ $value }} times"
+
+  # Network Alerts
+  - name: network_alerts
+    interval: 30s
+    rules:
+      - alert: HighNetworkErrorRate
+        expr: rate(node_network_receive_errs_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: network
+          service: "{{ $labels.instance }}"
+        annotations:
+          summary: "High network error rate"
+          description: "Network errors on {{ $labels.device }}: {{ $value }}/sec"
+
+      - alert: NetworkInterfaceDown
+        expr: node_network_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: network
+          service: "{{ $labels.instance }}"
+        annotations:
+          summary: "Network interface is down"
+          description: "Interface {{ $labels.device }} on {{ $labels.instance }} is down"
+
+  # Storage Alerts
+  - name: storage_alerts
+    interval: 30s
+    rules:
+      - alert: DiskIOHigh
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: disk
+          service: "{{ $labels.instance }}"
+        annotations:
+          summary: "High disk I/O detected"
+          description: "Disk I/O time {{ $value }}% on {{ $labels.device }}"
+
+      - alert: InodeUsageHigh
+        expr: (node_filesystem_files_free / node_filesystem_files) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: disk
+          service: "{{ $labels.instance }}"
+        annotations:
+          summary: "Inode usage critical"
+          description: "Only {{ $value }}% inodes free on {{ $labels.mountpoint }}"
+
+  # Service-Specific Alerts
+  - name: redis_alerts
+    interval: 30s
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: redis
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance {{ $labels.instance }} is unreachable"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+          service: redis
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis using {{ $value }}% of available memory"
+
+  # Message Queue Alerts
+  - name: message_queue_alerts
+    interval: 30s
+    rules:
+      - alert: MessageQueueBacklog
+        expr: rabbitmq_queue_messages > 10000
+        for: 10m
+        labels:
+          severity: warning
+          component: messagequeue
+          service: "{{ $labels.queue }}"
+        annotations:
+          summary: "Large message queue backlog"
+          description: "Queue {{ $labels.queue }} has {{ $value }} messages"
+
+      - alert: MessageProcessingSlowed
+        expr: rate(rabbitmq_queue_messages_published_total[5m]) > 2 * rate(rabbitmq_queue_messages_consumed_total[5m])
+        for: 10m
+        labels:
+          severity: warning
+          component: messagequeue
+          service: "{{ $labels.queue }}"
+        annotations:
+          summary: "Messages not being consumed fast enough"
+          description: "Queue {{ $labels.queue }} consumption rate too low"
+
+
