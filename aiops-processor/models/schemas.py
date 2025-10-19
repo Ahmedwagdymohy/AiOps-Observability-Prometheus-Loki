@@ -52,10 +52,22 @@ class AnalysisResult(BaseModel):
     """Complete analysis result from LLM"""
     alert_name: str
     severity: str
+    summary: str = ""
     root_cause: str
     evidence: List[str]
-    remediation_steps: List[RemediationStep]
+    remediation_steps: List[str]
+    severity_assessment: str = ""
     additional_context: Optional[str] = None
-    confidence: Optional[str] = "medium"
+    confidence: float = 0.5
     analyzed_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+
+class NotificationPayload(BaseModel):
+    """Payload for notification services"""
+    alert_name: str
+    severity: str
+    instance: Optional[str] = None
+    analysis: AnalysisResult
+    alert_url: Optional[str] = None
+    prometheus_url: Optional[str] = None
 
