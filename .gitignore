@@ -1,0 +1,48 @@
+# Environment files
+.env
+*.env
+!.env.example
+!env.template
+
+# Secrets
+secrets
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+env/
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Data directories (created by Docker volumes)
+prometheus_data/
+alertmanager_data/
+grafana_data/
+ollama_data/
+loki_data/
+
+
