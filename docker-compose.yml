@@ -52,26 +52,6 @@ services:
       - aiops-network
     restart: unless-stopped
 
-  # Ollama for LLM inference
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    environment:
-      - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_HOST=0.0.0.0
-    networks:
-      - aiops-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   # AIOps Processor - Your custom app
   aiops-processor:
     build: ./aiops-processor
@@ -81,15 +61,40 @@ services:
     volumes:
       - ./aiops-processor:/app
     environment:
-      - OLLAMA_URL=http://ollama:11434
+      # Monitoring Services
       - PROMETHEUS_URL=http://prometheus:9090
       - LOKI_URL=http://loki:3100
-      # DeepSeek API - Replace with your actual key
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-your_api_key_here}
-      - DEEPSEEK_MODEL=deepseek-chat
+      
+      # Huawei Cloud DeepSeek API Configuration (Competition)
+      # API Endpoint - Fixed for competition
+      - HUAWEI_API_URL=https://pangu.ap-southeast-1.myhuaweicloud.com/api/v2/chat/completions
+      # API Key - Set your competition API key here or in .env file
+      - HUAWEI_API_KEY=${HUAWEI_API_KEY:-your_huawei_api_key_here}
+      # Model Selection:
+      #   - deepseek-r1-distil-qwen-32b_raziqt (32B - More powerful, slower)
+      #   - distill-llama-8b_46e6iu (8B - Faster, lighter)
+      - HUAWEI_MODEL_NAME=${HUAWEI_MODEL_NAME:-deepseek-r1-distil-qwen-32b_raziqt}
+      
+      # Analysis Configuration
       - TIME_WINDOW_MINUTES=15
+      - MAX_LOG_LINES=500
+      - MAX_METRICS_POINTS=100
+      
+      # LLM Configuration
+      # Increased timeout for large models (can be slow)
+      - LLM_TIMEOUT=180
+      - LLM_TEMPERATURE=0.3
+      - LLM_MAX_TOKENS=2000
+      - LLM_TOP_P=0.9
+      - LLM_TOP_K=40
+      
+      # API Server Configuration
       - API_HOST=0.0.0.0
       - API_PORT=8000
+      
+      # Optional: Notification Configuration
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - GENERIC_WEBHOOK_URL=${GENERIC_WEBHOOK_URL:-}
     depends_on:
       prometheus:
         condition: service_started
@@ -152,7 +157,6 @@ volumes:
   prometheus_data:
   alertmanager_data:
   grafana_data:
-  ollama_data:
   loki_data:
 
 networks:

@@ -9,14 +9,42 @@ logger = logging.getLogger(__name__)
 
 
 class DeepSeekClient:
-    """Client for DeepSeek LLM API"""
+    """
+    Client for Huawei Cloud DeepSeek API
+    
+    This client implements the Huawei Cloud ModelArts API for DeepSeek models
+    as specified in the competition documentation.
+    
+    Supported Models:
+    - deepseek-r1-distil-qwen-32b_raziqt (32B - More powerful)
+    - distill-llama-8b_46e6iu (8B - Faster)
+    """
     
     def __init__(self, api_key: str = None, api_url: str = None, model: str = None):
-        self.api_key = api_key or settings.deepseek_api_key
-        self.api_url = api_url or settings.deepseek_api_url
-        self.model = model or settings.deepseek_model
+        """
+        Initialize the Huawei Cloud DeepSeek client
+        
+        Args:
+            api_key: Huawei API key (X-Auth-Token)
+            api_url: Huawei API endpoint URL
+            model: Model name to use
+        """
+        self.api_key = api_key or settings.huawei_api_key
+        self.api_url = api_url or settings.huawei_api_url
+        self.model = model or settings.huawei_model_name
         self.timeout = settings.llm_timeout
         self.temperature = settings.llm_temperature
+        self.max_tokens = settings.llm_max_tokens
+        self.top_p = settings.llm_top_p
+        self.top_k = settings.llm_top_k
+        
+        # Validate configuration
+        if not self.api_key:
+            logger.error("Huawei API key is not configured! Please set HUAWEI_API_KEY environment variable.")
+        else:
+            logger.info(f"DeepSeek client initialized with model: {self.model}")
+            logger.info(f"API endpoint: {self.api_url}")
+            logger.info(f"Timeout: {self.timeout}s, Temperature: {self.temperature}")
     
     @retry(
         stop=stop_after_attempt(3),
@@ -29,7 +57,7 @@ class DeepSeekClient:
         logs_data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
-        Analyze an alert using the LLM
+        Analyze an alert using the Huawei Cloud LLM
         
         Args:
             alert_context: Alert details (labels, annotations, etc.)
@@ -40,12 +68,13 @@ class DeepSeekClient:
             Analysis result as a dictionary
         """
         prompt = self._build_analysis_prompt(alert_context, metrics_data, logs_data)
+        system_prompt = "You are an expert Site Reliability Engineer (SRE) and DevOps engineer specializing in incident analysis and root cause determination. Always respond with valid JSON."
         
         try:
-            response = await self._call_api(prompt)
+            response = await self._call_api(prompt, system_prompt)
             return self._parse_analysis_response(response)
         except Exception as e:
-            logger.error(f"Error analyzing alert with LLM: {e}")
+            logger.error(f"Error analyzing alert with Huawei Cloud LLM: {e}")
             return None
     
     def _build_analysis_prompt(
@@ -183,53 +212,106 @@ Provide your analysis now:"""
         
         return "\n".join([f"Total log entries: {total_logs}"] + formatted)
     
-    async def _call_api(self, prompt: str) -> str:
+    async def _call_api(self, prompt: str, system_prompt: str = None) -> str:
         """
-        Call the DeepSeek API
+        Call the Huawei Cloud DeepSeek API
+        
+        This implements the Huawei Cloud ModelArts API specification:
+        - Endpoint: https://pangu.ap-southeast-1.myhuaweicloud.com/api/v2/chat/completions
+        - Authentication: X-Auth-Token header
+        - Request format: OpenAI-compatible chat completion
         
         Args:
-            prompt: The prompt to send
+            prompt: The user prompt to send
+            system_prompt: Optional system prompt to set behavior
         
         Returns:
             API response text
         """
+        if not self.api_key:
+            raise ValueError("Huawei API key is not configured. Please set HUAWEI_API_KEY environment variable.")
+        
+        # Build headers according to Huawei Cloud API specification
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-Auth-Token": self.api_key  # Huawei uses X-Auth-Token instead of Bearer
         }
         
+        # Build messages array
+        messages = []
+        if system_prompt:
+            messages.append({
+                "role": "system",
+                "content": system_prompt
+            })
+        messages.append({
+            "role": "user",
+            "content": prompt
+        })
+        
+        # Build payload according to Huawei Cloud API specification
         payload = {
-            "model": self.model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are an expert SRE and DevOps engineer specializing in incident analysis and root cause determination. Always respond with valid JSON."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
+            "model": self.model,  # e.g., "deepseek-r1-distil-qwen-32b_raziqt"
+            "messages": messages,
+            "max_tokens": self.max_tokens,
             "temperature": self.temperature,
-            "max_tokens": 2000,
-            "response_format": {"type": "json_object"}
+            "top_p": self.top_p,
+            "top_k": self.top_k,
+            "stream": False  # Non-streaming mode for simplicity
         }
         
-        logger.info(f"Calling DeepSeek API with model: {self.model}")
+        logger.info(f"Calling Huawei Cloud API with model: {self.model}")
+        logger.info(f"Request parameters - Temperature: {self.temperature}, Max Tokens: {self.max_tokens}")
         
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(
-                self.api_url,
-                headers=headers,
-                json=payload
-            )
-            response.raise_for_status()
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    self.api_url,
+                    headers=headers,
+                    json=payload
+                )
+                response.raise_for_status()
+                
+                # Parse response according to OpenAI-compatible format
+                data = response.json()
+                
+                # Extract content from response
+                # Response format: data['choices'][0]['message']['content']
+                if "choices" in data and len(data["choices"]) > 0:
+                    content = data["choices"][0]["message"]["content"]
+                    logger.info(f"Successfully received response from Huawei Cloud API ({len(content)} characters)")
+                    
+                    # Log token usage if available
+                    if "usage" in data:
+                        usage = data["usage"]
+                        logger.info(f"Token usage - Prompt: {usage.get('prompt_tokens')}, "
+                                  f"Completion: {usage.get('completion_tokens')}, "
+                                  f"Total: {usage.get('total_tokens')}")
+                    
+                    return content
+                else:
+                    logger.error(f"Unexpected response format: {data}")
+                    raise ValueError("Invalid response format from Huawei Cloud API")
+                    
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from Huawei Cloud API: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text}")
             
-            data = response.json()
-            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            
-            logger.info("Successfully received response from DeepSeek API")
-            return content
+            if e.response.status_code == 401:
+                raise ValueError("Authentication failed. Please check your HUAWEI_API_KEY.")
+            elif e.response.status_code == 429:
+                raise ValueError("Rate limit exceeded. Please wait before retrying.")
+            elif e.response.status_code == 503:
+                raise ValueError("Huawei Cloud API service unavailable. Please try again later.")
+            else:
+                raise
+        except httpx.TimeoutException:
+            logger.error(f"Request timed out after {self.timeout} seconds")
+            logger.warning("Tip: The model might be slow. Consider using distill-llama-8b_46e6iu for faster responses.")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error calling Huawei Cloud API: {e}")
+            raise
     
     def _parse_analysis_response(self, response: str) -> Dict[str, Any]:
         """

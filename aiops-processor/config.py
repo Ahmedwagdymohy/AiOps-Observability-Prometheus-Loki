@@ -7,17 +7,24 @@ class Settings(BaseSettings):
     # Service URLs
     prometheus_url: str = os.getenv("PROMETHEUS_URL", "http://prometheus:9090")
     loki_url: str = os.getenv("LOKI_URL", "http://loki:3100")
-    ollama_url: str = os.getenv("OLLAMA_URL", "http://ollama:11434")
     
-    # LLM Selection
-    use_ollama: bool = os.getenv("USE_OLLAMA", "false").lower() in ("true", "1", "yes")
-    ollama_model: str = os.getenv("OLLAMA_MODEL", "llama2")
+    # Huawei Cloud DeepSeek API Configuration (Competition)
+    # API Endpoint for Huawei Cloud ModelArts
+    huawei_api_url: str = os.getenv(
+        "HUAWEI_API_URL", 
+        "https://pangu.ap-southeast-1.myhuaweicloud.com/api/v2/chat/completions"
+    )
+    # API Key (X-Auth-Token) - Replace with your competition API key
+    huawei_api_key: str = os.getenv("HUAWEI_API_KEY", "")
     
-    # DeepSeek API Configuration (supports both standard and Huawei Cloud)
-    deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
-    # Default to Huawei Cloud endpoint, fallback to standard DeepSeek
-    deepseek_api_url: str = os.getenv("DEEPSEEK_API_URL", "https://deepseek.ia.huaweicloud.ai/v1/chat/completions")
-    deepseek_model: str = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+    # Model Selection - Choose which Huawei Cloud model to use
+    # Options: 
+    #   - "deepseek-r1-distil-qwen-32b_raziqt" (More powerful, better for complex tasks)
+    #   - "distill-llama-8b_46e6iu" (Faster, lighter)
+    huawei_model_name: str = os.getenv(
+        "HUAWEI_MODEL_NAME", 
+        "deepseek-r1-distil-qwen-32b_raziqt"
+    )
     
     # Analysis Configuration
     time_window_minutes: int = int(os.getenv("TIME_WINDOW_MINUTES", "15"))
@@ -33,9 +40,19 @@ class Settings(BaseSettings):
     api_port: int = int(os.getenv("API_PORT", "8000"))
     
     # LLM Configuration
-    llm_timeout: int = int(os.getenv("LLM_TIMEOUT", "120"))
+    # Increased timeout for large Huawei models (can be slow)
+    llm_timeout: int = int(os.getenv("LLM_TIMEOUT", "180"))
     llm_max_retries: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
-    llm_temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))
+    # Temperature: 0.1 for precise answers, 0.7-0.8 for creative responses
+    llm_temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.3"))
+    llm_max_tokens: int = int(os.getenv("LLM_MAX_TOKENS", "2000"))
+    llm_top_p: float = float(os.getenv("LLM_TOP_P", "0.9"))
+    llm_top_k: int = int(os.getenv("LLM_TOP_K", "40"))
+    
+    # Backward compatibility (deprecated, but kept for reference)
+    deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
+    deepseek_api_url: str = os.getenv("DEEPSEEK_API_URL", "")
+    deepseek_model: str = os.getenv("DEEPSEEK_MODEL", "")
     
     class Config:
         env_file = ".env"

@@ -30,7 +30,8 @@ async def lifespan(app: FastAPI):
     logger.info("Starting AIOps Alert Processor")
     logger.info(f"Prometheus URL: {settings.prometheus_url}")
     logger.info(f"Loki URL: {settings.loki_url}")
-    logger.info(f"DeepSeek Model: {settings.deepseek_model}")
+    logger.info(f"Huawei Cloud Model: {settings.huawei_model_name}")
+    logger.info(f"Huawei API Endpoint: {settings.huawei_api_url}")
     logger.info(f"Time Window: {settings.time_window_minutes} minutes")
     
     # Start background alert processor
@@ -74,7 +75,8 @@ async def health_check():
         "services": {
             "prometheus": settings.prometheus_url,
             "loki": settings.loki_url,
-            "llm_model": settings.deepseek_model
+            "llm_model": settings.huawei_model_name,
+            "llm_endpoint": settings.huawei_api_url
         },
         "queue_size": alert_queue.qsize()
     }
