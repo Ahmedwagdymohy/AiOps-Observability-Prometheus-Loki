@@ -1,0 +1,100 @@
+groups:
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # High CPU Usage Alert
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+          component: cpu
+          service: "{{ $labels.instance }}"
+        annotations:
+          summary: "High CPU usage detected on {{ $labels.instance }}"
+          description: "CPU usage is above 80% (current value: {{ $value }}%)"
+          runbook_url: "https://runbooks.example.com/high-cpu"
+
+      # Critical CPU Usage Alert
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 1m
+        labels:
+          severity: critical
+          component: cpu
+          service: "{{ $labels.instance }}"
+        annotations:
+          summary: "Critical CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is critically high at {{ $value }}%"
+          runbook_url: "https://runbooks.example.com/critical-cpu"
+
+      # High Memory Usage Alert
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+          component: memory
+          service: "{{ $labels.instance }}"
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 80% (current value: {{ $value }}%)"
+          runbook_url: "https://runbooks.example.com/high-memory"
+
+      # Critical Memory Usage Alert
+      - alert: CriticalMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 1m
+        labels:
+          severity: critical
+          component: memory
+          service: "{{ $labels.instance }}"
+        annotations:
+          summary: "Critical memory usage on {{ $labels.instance }}"
+          description: "Memory usage is critically high at {{ $value }}%"
+          runbook_url: "https://runbooks.example.com/critical-memory"
+
+      # High Disk Usage Alert
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: disk
+          service: "{{ $labels.instance }}"
+          mountpoint: "{{ $labels.mountpoint }}"
+        annotations:
+          summary: "High disk usage on {{ $labels.instance }}:{{ $labels.mountpoint }}"
+          description: "Disk usage is above 80% on {{ $labels.mountpoint }} (current value: {{ $value }}%)"
+          runbook_url: "https://runbooks.example.com/high-disk"
+
+      # Instance Down Alert
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: availability
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "Instance {{ $labels.instance }} is down"
+          description: "{{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute"
+          runbook_url: "https://runbooks.example.com/instance-down"
+
+  - name: application_alerts
+    interval: 30s
+    rules:
+      # High Error Rate (placeholder for application metrics)
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          component: application
+          service: "{{ $labels.service }}"
+        annotations:
+          summary: "High error rate detected on {{ $labels.service }}"
+          description: "Error rate is {{ $value }} errors/sec on {{ $labels.service }}"
+          runbook_url: "https://runbooks.example.com/high-error-rate"
+
+
