@@ -26,15 +26,15 @@ query_range:
 schema_config:
   configs:
     - from: 2020-10-24
-      store: boltdb-shipper
+      store: tsdb
       object_store: filesystem
-      schema: v11
+      schema: v13
       index:
         prefix: index_
         period: 24h
 
 ruler:
-  alertmanager_url: http://localhost:9093
+  alertmanager_url: http://alertmanager:9093
 
 # Limits configuration
 limits_config:
@@ -54,9 +54,8 @@ compactor:
   retention_delete_delay: 2h
   retention_delete_worker_count: 150
 
-# Table manager (for retention)
-table_manager:
-  retention_deletes_enabled: true
+# Retention configuration
+limits_config:
   retention_period: 168h
 
 
