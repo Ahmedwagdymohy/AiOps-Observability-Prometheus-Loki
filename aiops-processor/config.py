@@ -9,9 +9,14 @@ class Settings(BaseSettings):
     loki_url: str = os.getenv("LOKI_URL", "http://loki:3100")
     ollama_url: str = os.getenv("OLLAMA_URL", "http://ollama:11434")
     
-    # DeepSeek API Configuration
+    # LLM Selection
+    use_ollama: bool = os.getenv("USE_OLLAMA", "false").lower() in ("true", "1", "yes")
+    ollama_model: str = os.getenv("OLLAMA_MODEL", "llama2")
+    
+    # DeepSeek API Configuration (supports both standard and Huawei Cloud)
     deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
-    deepseek_api_url: str = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions")
+    # Default to Huawei Cloud endpoint, fallback to standard DeepSeek
+    deepseek_api_url: str = os.getenv("DEEPSEEK_API_URL", "https://deepseek.ia.huaweicloud.ai/v1/chat/completions")
     deepseek_model: str = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
     
     # Analysis Configuration
@@ -38,5 +43,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-
