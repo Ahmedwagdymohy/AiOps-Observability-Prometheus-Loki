@@ -1,0 +1,47 @@
+global:
+  resolve_timeout: 5m
+
+# Templates for notifications
+templates:
+  - '/etc/alertmanager/*.tmpl'
+
+# Route configuration
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'aiops-webhook'
+  routes:
+    # Critical alerts go immediately
+    - match:
+        severity: critical
+      receiver: 'aiops-webhook'
+      group_wait: 0s
+      repeat_interval: 5m
+
+    # Warning alerts
+    - match:
+        severity: warning
+      receiver: 'aiops-webhook'
+      repeat_interval: 15m
+
+# Receivers configuration
+receivers:
+  # AIOps Processor Webhook
+  - name: 'aiops-webhook'
+    webhook_configs:
+      - url: 'http://aiops-processor:8000/webhook/alerts'
+        send_resolved: true
+        max_alerts: 10
+
+# Inhibition rules
+inhibit_rules:
+  # Inhibit warning if critical is firing for the same alert
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+
