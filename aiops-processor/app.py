@@ -153,6 +153,15 @@ async def queue_status():
     }
 
 
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint (basic implementation)"""
+    return {
+        "queue_size": alert_queue.qsize(),
+        "status": "ok"
+    }
+
+
 async def process_alert_queue():
     """
     Background task that processes alerts from the queue

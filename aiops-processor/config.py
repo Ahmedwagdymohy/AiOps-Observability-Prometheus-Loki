@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     
     # Huawei Cloud DeepSeek API Configuration (Competition)
     # API Endpoint for Huawei Cloud ModelArts
+    # Note: Try both URL formats - with or without dash in "ap-southeast"
     huawei_api_url: str = os.getenv(
         "HUAWEI_API_URL", 
         "https://pangu.ap-southeast-1.myhuaweicloud.com/api/v2/chat/completions"
