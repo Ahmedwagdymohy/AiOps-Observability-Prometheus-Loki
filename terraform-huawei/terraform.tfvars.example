@@ -1,0 +1,35 @@
+# Huawei Cloud Credentials
+# Copy this file to terraform.tfvars and fill in your actual credentials
+# terraform.tfvars is gitignored for security
+
+# Get these from Huawei Cloud Console -> My Credentials -> Access Keys
+access_key = "YOUR_ACCESS_KEY_HERE"
+secret_key = "YOUR_SECRET_KEY_HERE"
+
+# Region (keep as ap-southeast-1 to match the API region)
+region = "ap-southeast-1"
+
+# Project Configuration
+project_name = "aiops-prototype"
+environment  = "dev"
+
+# Cluster Configuration
+cluster_version = "v1.28"
+cluster_flavor  = "cce.s1.small"  # Small cluster for cost saving
+
+# Node Configuration
+node_flavor = "c6.large.2"  # 2 vCPUs, 4GB RAM
+node_count  = 2             # Minimum for HA
+
+# Enable Container Registry
+enable_swr = true
+
+# Tags
+tags = {
+  Project     = "AIOps"
+  ManagedBy   = "Terraform"
+  Environment = "Prototype"
+  Purpose     = "AI-Monitoring-Competition"
+  Owner       = "Your-Name"
+}
+

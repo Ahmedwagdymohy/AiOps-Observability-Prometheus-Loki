@@ -1,0 +1,23 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Sensitive files
+terraform.tfvars
+*.auto.tfvars
+secrets.tf
+
+# Backup files
+*.backup
+*.bak
+
+# Kubeconfig files
+kubeconfig*
+*.kubeconfig
+
+# OS files
+.DS_Store
+Thumbs.db
+
