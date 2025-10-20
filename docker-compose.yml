@@ -68,8 +68,8 @@ services:
       # Huawei Cloud DeepSeek API Configuration (Competition)
       # API Endpoint - Fixed for competition
       - HUAWEI_API_URL=https://pangu.ap-southeast-1.myhuaweicloud.com/api/v2/chat/completions
-      # API Key - Set your competition API key here or in .env file
-      - HUAWEI_API_KEY=${HUAWEI_API_KEY:-your_huawei_api_key_here}
+      # API Key - Set in docker-compose.override.yml or via environment variable
+      - HUAWEI_API_KEY=${HUAWEI_API_KEY:-}
       # Model Selection:
       #   - deepseek-r1-distil-qwen-32b_raziqt (32B - More powerful, slower)
       #   - distill-llama-8b_46e6iu (8B - Faster, lighter)

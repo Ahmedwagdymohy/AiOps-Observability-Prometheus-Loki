@@ -218,7 +218,7 @@ Provide your analysis now:"""
         
         This implements the Huawei Cloud ModelArts API specification:
         - Endpoint: https://pangu.ap-southeast-1.myhuaweicloud.com/api/v2/chat/completions
-        - Authentication: X-Auth-Token header
+        - Authentication: Bearer token (Authorization header)
         - Request format: OpenAI-compatible chat completion
         
         Args:
@@ -232,9 +232,10 @@ Provide your analysis now:"""
             raise ValueError("Huawei API key is not configured. Please set HUAWEI_API_KEY environment variable.")
         
         # Build headers according to Huawei Cloud API specification
+        # Use Bearer token authentication (tested and working)
         headers = {
             "Content-Type": "application/json",
-            "X-Auth-Token": self.api_key  # Huawei uses X-Auth-Token instead of Bearer
+            "Authorization": f"Bearer {self.api_key}"
         }
         
         # Build messages array
