@@ -74,12 +74,10 @@ resource "huaweicloud_cce_node_pool" "aiops_node_pool" {
   # Node configuration
   runtime = "docker"
   
-  # Billing
-  billing_mode = 0  # Pay-per-use
-  
-  # Taints (none for now)
-  taints = []
-  
+
+  #Key pair access name
+  key_pair = "Aiops"
+
   # Labels
   labels = {
     "node-role" = "worker"

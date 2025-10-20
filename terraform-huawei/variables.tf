@@ -21,7 +21,7 @@ variable "region" {
 variable "project_name" {
   description = "Project name prefix for resources"
   type        = string
-  default     = "aiops-prototype"
+  default     = "Ai-Ops"
 }
 
 variable "environment" {
