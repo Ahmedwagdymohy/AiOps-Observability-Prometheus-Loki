@@ -1,0 +1,12 @@
+# Create dedicated namespace for monitoring stack
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+# Create namespace for demo applications
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-apps
+

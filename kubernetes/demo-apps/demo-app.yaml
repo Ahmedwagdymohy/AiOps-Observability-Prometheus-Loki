@@ -1,0 +1,145 @@
+# Demo Python Flask application that generates metrics and logs
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-web-app
+  namespace: demo-apps
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-web-app
+  template:
+    metadata:
+      labels:
+        app: demo-web-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: app
+          image: python:3.9-slim
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              pip install flask prometheus-client requests
+              cat > /app.py << 'EOF'
+              from flask import Flask, jsonify
+              from prometheus_client import Counter, Histogram, Gauge, generate_latest
+              import random
+              import time
+              import logging
+              
+              app = Flask(__name__)
+              
+              # Configure logging
+              logging.basicConfig(level=logging.INFO)
+              logger = logging.getLogger(__name__)
+              
+              # Prometheus metrics
+              request_count = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status'])
+              request_duration = Histogram('http_request_duration_seconds', 'HTTP request duration')
+              active_requests = Gauge('http_requests_active', 'Active HTTP requests')
+              cpu_usage = Gauge('process_cpu_usage', 'CPU usage simulation')
+              memory_usage = Gauge('process_memory_bytes', 'Memory usage simulation')
+              
+              @app.route('/')
+              def home():
+                  active_requests.inc()
+                  start = time.time()
+                  
+                  logger.info("Processing home request")
+                  time.sleep(random.uniform(0.01, 0.1))
+                  
+                  request_count.labels(method='GET', endpoint='/', status='200').inc()
+                  request_duration.observe(time.time() - start)
+                  active_requests.dec()
+                  
+                  return jsonify({'status': 'ok', 'message': 'Demo app running'})
+              
+              @app.route('/api/data')
+              def api_data():
+                  active_requests.inc()
+                  start = time.time()
+                  
+                  logger.info("Processing API data request")
+                  time.sleep(random.uniform(0.05, 0.2))
+                  
+                  # Simulate occasional errors
+                  if random.random() < 0.1:  # 10% error rate
+                      logger.error("ERROR: Failed to fetch data - database timeout")
+                      request_count.labels(method='GET', endpoint='/api/data', status='500').inc()
+                      active_requests.dec()
+                      return jsonify({'error': 'Database timeout'}), 500
+                  
+                  request_count.labels(method='GET', endpoint='/api/data', status='200').inc()
+                  request_duration.observe(time.time() - start)
+                  active_requests.dec()
+                  
+                  return jsonify({'data': [1, 2, 3, 4, 5]})
+              
+              @app.route('/stress')
+              def stress():
+                  """Endpoint to simulate high CPU/memory"""
+                  active_requests.inc()
+                  logger.warning("WARNING: Stress endpoint called - high resource usage expected")
+                  
+                  # Simulate CPU stress
+                  _ = [i**2 for i in range(100000)]
+                  cpu_usage.set(random.uniform(0.8, 0.95))
+                  memory_usage.set(random.uniform(500*1024*1024, 800*1024*1024))
+                  
+                  logger.warning("WARNING: CPU usage: 85%, Memory usage: 650MB")
+                  request_count.labels(method='GET', endpoint='/stress', status='200').inc()
+                  active_requests.dec()
+                  
+                  return jsonify({'status': 'stress completed'})
+              
+              @app.route('/metrics')
+              def metrics():
+                  # Update random metrics
+                  cpu_usage.set(random.uniform(0.1, 0.3))
+                  memory_usage.set(random.uniform(100*1024*1024, 300*1024*1024))
+                  return generate_latest()
+              
+              @app.route('/health')
+              def health():
+                  return jsonify({'status': 'healthy'})
+              
+              if __name__ == '__main__':
+                  logger.info("Starting demo web application")
+                  app.run(host='0.0.0.0', port=5000)
+              EOF
+              python /app.py
+          ports:
+            - containerPort: 5000
+              name: http
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-web-app
+  namespace: demo-apps
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "5000"
+    prometheus.io/path: "/metrics"
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 5000
+      name: http
+  selector:
+    app: demo-web-app
+

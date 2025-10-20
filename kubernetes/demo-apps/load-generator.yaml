@@ -1,0 +1,70 @@
+# Load generator to create traffic and trigger alerts
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: demo-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+        - name: generator
+          image: python:3.9-slim
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              pip install requests
+              cat > /load_gen.py << 'EOF'
+              import requests
+              import time
+              import random
+              import logging
+              
+              logging.basicConfig(level=logging.INFO)
+              logger = logging.getLogger(__name__)
+              
+              BASE_URL = "http://demo-web-app"
+              
+              def generate_load():
+                  logger.info("Starting load generator")
+                  
+                  while True:
+                      try:
+                          # Normal traffic
+                          for _ in range(random.randint(5, 15)):
+                              endpoint = random.choice(['/', '/api/data', '/health'])
+                              response = requests.get(f"{BASE_URL}{endpoint}", timeout=5)
+                              logger.info(f"Request to {endpoint}: {response.status_code}")
+                              time.sleep(random.uniform(0.5, 2))
+                          
+                          # Occasionally trigger stress
+                          if random.random() < 0.2:  # 20% chance
+                              logger.warning("Triggering stress endpoint")
+                              requests.get(f"{BASE_URL}/stress", timeout=10)
+                              time.sleep(5)
+                      
+                      except Exception as e:
+                          logger.error(f"Error generating load: {e}")
+                          time.sleep(5)
+              
+              if __name__ == '__main__':
+                  time.sleep(30)  # Wait for demo app to be ready
+                  generate_load()
+              EOF
+              python /load_gen.py
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+

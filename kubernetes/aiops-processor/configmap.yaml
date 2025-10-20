@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aiops-config
+  namespace: monitoring
+data:
+  # Monitoring URLs
+  PROMETHEUS_URL: "http://prometheus:9090"
+  LOKI_URL: "http://loki:3100"
+  
+  # Huawei Cloud API endpoint
+  HUAWEI_API_URL: "https://pangu.ap-southeast-1.myhuaweicloud.com/api/v2/chat/completions"
+  
+  # Model selection (32B or 8B)
+  HUAWEI_MODEL_NAME: "deepseek-r1-distil-qwen-32b_raziqt"
+  
+  # Analysis settings
+  TIME_WINDOW_MINUTES: "15"
+  MAX_LOG_LINES: "500"
+  MAX_METRICS_POINTS: "100"
+  
+  # LLM settings
+  LLM_TIMEOUT: "180"
+  LLM_TEMPERATURE: "0.3"
+  LLM_MAX_TOKENS: "2000"
+  LLM_TOP_P: "0.9"
+  LLM_TOP_K: "40"
+  
+  # API server
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+

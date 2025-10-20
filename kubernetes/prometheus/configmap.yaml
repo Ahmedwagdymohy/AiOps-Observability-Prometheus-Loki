@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    # Alerting configuration
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - alertmanager:9093
+    
+    # Load rules
+    rule_files:
+      - /etc/prometheus/alert_rules.yml
+    
+    # Scrape configs
+    scrape_configs:
+      # Scrape Prometheus itself
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+      
+      # Scrape Kubernetes nodes
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__address__]
+            regex: '(.*):10250'
+            replacement: '${1}:9100'
+            target_label: __address__
+      
+      # Scrape Kubernetes pods
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+      
+      # Scrape demo applications
+      - job_name: 'demo-apps'
+        kubernetes_sd_configs:
+          - role: service
+            namespaces:
+              names:
+                - demo-apps
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+  
+  alert_rules.yml: |
+    groups:
+      - name: demo_app_alerts
+        interval: 30s
+        rules:
+          # High CPU usage
+          - alert: HighCPUUsage
+            expr: rate(process_cpu_seconds_total[5m]) > 0.8
+            for: 2m
+            labels:
+              severity: warning
+              component: cpu
+            annotations:
+              summary: "High CPU usage detected"
+              description: "CPU usage is above 80% for {{ $labels.instance }}"
+          
+          # High memory usage
+          - alert: HighMemoryUsage
+            expr: (process_resident_memory_bytes / 1024 / 1024) > 500
+            for: 2m
+            labels:
+              severity: warning
+              component: memory
+            annotations:
+              summary: "High memory usage detected"
+              description: "Memory usage is above 500MB for {{ $labels.instance }}"
+          
+          # Application errors
+          - alert: HighErrorRate
+            expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+            for: 2m
+            labels:
+              severity: critical
+              component: application
+            annotations:
+              summary: "High error rate detected"
+              description: "Error rate is above 10% for {{ $labels.job }}"
+          
+          # Pod restarts
+          - alert: PodRestarting
+            expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+            for: 5m
+            labels:
+              severity: warning
+              component: pod
+            annotations:
+              summary: "Pod is restarting"
+              description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting"
+

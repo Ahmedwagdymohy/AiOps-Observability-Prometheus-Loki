@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+    
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'aiops-webhook'
+    
+    receivers:
+      - name: 'aiops-webhook'
+        webhook_configs:
+          - url: 'http://aiops-processor:8000/webhook/alerts'
+            send_resolved: true
+
