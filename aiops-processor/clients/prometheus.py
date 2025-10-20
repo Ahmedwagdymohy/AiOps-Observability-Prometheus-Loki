@@ -147,9 +147,17 @@ class PrometheusClient:
             queries["disk_read"] = f'irate(node_disk_read_bytes_total{{instance="{instance}"}}[5m])'
             queries["disk_write"] = f'irate(node_disk_written_bytes_total{{instance="{instance}"}}[5m])'
         
-        # If no specific queries were built, add a generic instance query
-        if not queries and instance:
-            queries["instance_up"] = f'up{{instance="{instance}"}}'
+        # If no specific queries were built, add generic queries
+        if not queries:
+            if instance:
+                queries["instance_up"] = f'up{{instance="{instance}"}}'
+                # Get any metrics for this instance
+                queries["all_metrics"] = f'{{instance="{instance}"}}'
+            elif job:
+                queries["job_up"] = f'up{{job="{job}"}}'
+            else:
+                # Last resort - get some metrics
+                queries["up_status"] = 'up'
         
         return queries
     

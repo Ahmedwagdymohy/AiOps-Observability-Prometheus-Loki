@@ -68,7 +68,7 @@ class DeepSeekClient:
             Analysis result as a dictionary
         """
         prompt = self._build_analysis_prompt(alert_context, metrics_data, logs_data)
-        system_prompt = "You are an expert Site Reliability Engineer (SRE) and DevOps engineer specializing in incident analysis and root cause determination. Always respond with valid JSON."
+        system_prompt = "You are an expert SRE analyzing incidents. Respond ONLY with valid JSON. Do not include any thinking process, explanations, or text outside the JSON object."
         
         try:
             response = await self._call_api(prompt, system_prompt)
@@ -107,7 +107,7 @@ class DeepSeekClient:
         # Format logs for the prompt
         logs_summary = self._format_logs_for_prompt(logs_data)
         
-        prompt = f"""You are an expert Site Reliability Engineer (SRE) analyzing a production alert. Your task is to perform root cause analysis and provide actionable remediation steps.
+        prompt = f"""Analyze this production alert and respond with ONLY a JSON object (no extra text, no thinking process).
 
 **ALERT INFORMATION:**
 - Alert Name: {alert_name}
@@ -122,35 +122,17 @@ class DeepSeekClient:
 **LOG DATA:**
 {logs_summary}
 
-**ANALYSIS REQUIRED:**
-Please analyze the above information and provide:
-
-1. **Summary**: A brief 2-3 sentence summary of the incident
-2. **Root Cause**: The most likely root cause based on metrics and logs
-3. **Evidence**: Specific evidence from metrics and logs supporting your analysis (list 3-5 key pieces of evidence)
-4. **Remediation Steps**: Concrete, actionable steps to resolve the issue (ordered by priority)
-5. **Severity Assessment**: Your assessment of the actual impact (Critical/High/Medium/Low) with justification
-
-**OUTPUT FORMAT:**
-Respond ONLY with a valid JSON object in this exact format:
+**REQUIRED JSON FORMAT:**
 {{
-  "summary": "Brief summary here",
-  "root_cause": "Identified root cause",
-  "evidence": [
-    "Evidence point 1",
-    "Evidence point 2",
-    "Evidence point 3"
-  ],
-  "remediation_steps": [
-    "Step 1: Immediate action",
-    "Step 2: Short-term fix",
-    "Step 3: Long-term solution"
-  ],
+  "summary": "Brief 2-3 sentence summary of the incident",
+  "root_cause": "Most likely root cause based on available data",
+  "evidence": ["Evidence point 1", "Evidence point 2", "Evidence point 3"],
+  "remediation_steps": ["Step 1: Immediate action", "Step 2: Short-term fix", "Step 3: Long-term solution"],
   "severity_assessment": "Critical/High/Medium/Low - Justification",
   "confidence": 0.85
 }}
 
-Provide your analysis now:"""
+Respond ONLY with the JSON object:"""
         
         return prompt
     
@@ -318,6 +300,9 @@ Provide your analysis now:"""
         """
         Parse the LLM response into a structured format
         
+        DeepSeek R1 models often include <think> tags in their responses.
+        We need to extract the JSON from the response.
+        
         Args:
             response: Raw LLM response
         
@@ -325,8 +310,19 @@ Provide your analysis now:"""
             Parsed analysis result
         """
         try:
+            # DeepSeek R1 models may include thinking process in <think> tags
+            # Remove everything before the first { and after the last }
+            clean_response = response.strip()
+            
+            # Find the JSON object (starts with { and ends with })
+            start_idx = clean_response.find('{')
+            end_idx = clean_response.rfind('}')
+            
+            if start_idx != -1 and end_idx != -1:
+                clean_response = clean_response[start_idx:end_idx + 1]
+            
             # Try to parse as JSON
-            result = json.loads(response)
+            result = json.loads(clean_response)
             
             # Ensure all required fields are present
             required_fields = ["summary", "root_cause", "evidence", "remediation_steps", "severity_assessment"]
